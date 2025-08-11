@@ -26,7 +26,7 @@ app.use(express.json());
 
 app.get('/', async (req: Request, res: Response) => {
     try{
-        await run()
+
         viewFeed().then(response => {
             res.send(response)
         })

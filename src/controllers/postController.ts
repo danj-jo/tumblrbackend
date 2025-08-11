@@ -26,16 +26,22 @@ export const viewFeed = async () => {
        const posts = db.collection('posts');
        const users = db.collection('users')
        const result = await posts.find().toArray()
-       // @ts-ignore
-       return await Promise.all(result.map(async post => ({
-           id: post._id.toString(),
-           profilePicture: post.profilePicture,
-           content: post.content,
-           createdAt: post.createdAt,
-           notes: post.notes
-       }
-       )))
 
+       // @ts-ignore
+       return await Promise.all(result.map(async post => {
+           const user = await users.findOne({ _id: new ObjectId(post.userId) });
+            console.log(user?.username)
+            console.log(result)
+           return {
+               id: post._id.toString(),
+               userId: post.userId,
+               username: user?.username || 'Unknown',
+               profilePicture: post.profilePicture ,
+               content: post.content,
+               createdAt: post.createdAt,
+               notes: post.notes,
+           };
+       }));
    }
    catch(e){
        return e
@@ -44,27 +50,35 @@ export const viewFeed = async () => {
 export const viewFollowing = async (followingPostIds: string[]) => {
     try {
         const db = await connectToDatabase();
-        const posts = db.collection('posts');
+        const postsCollection = db.collection('posts');
+        const usersCollection = db.collection('users');
 
         // Convert strings to ObjectIds
         const followingObjectIds = followingPostIds.map(id => new ObjectId(id));
 
         // Query posts by _id in followingObjectIds
-        const result = await posts.find({ _id: { $in: followingObjectIds } }).toArray();
+        const result = await postsCollection.find({ _id: { $in: followingObjectIds } }).toArray();
 
-        return result.map(post => ({
-            id: post._id.toString(),
-            userId: post.userId,
-            profilePicture: post.profilePicture,
-            content: post.content,
-            createdAt: post.createdAt,
-            notes: post.notes,
+        // Attach usernames just like viewFeed
+        return await Promise.all(result.map(async post => {
+            const user = await usersCollection.findOne({ _id: new ObjectId(post.userId) });
+
+            return {
+                id: post._id.toString(),
+                userId: post.userId,
+                username: user?.username || 'Unknown',
+                profilePicture: post.profilePicture,
+                content: post.content,
+                createdAt: post.createdAt,
+                notes: post.notes,
+            };
         }));
     } catch (error) {
-        console.error("Error in viewFollowingPosts:", error);
+        console.error("Error in viewFollowing:", error);
         throw error;
     }
 };
+
 
 
 export const editPost = async (id: string, content: {}) => {
